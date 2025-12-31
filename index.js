@@ -1,54 +1,68 @@
-import {openai} from "./config.js"
+import { openai } from '@ai-sdk/openai';
 import { generateText } from 'ai';
+import { generateObject } from 'ai';
 import { embed } from 'ai';
+import { z } from "zod";
 
 
-const EMBEDDING_MODEL_NAME = 'text-embedding-3-small'; 
-const aiModel = openai("gpt-4o")
+const model = openai('gpt-4o')
 
-/*
-  Challenge: Generate text and embeddings using the vercel ai sdk
-    1. Use the `generateText` interface in generateResponse function to prompt the `aiModel` to create a recipe for your faviourite meal, then return the generated text.
-    2. Call `generateResponse` function in the main function.
-    3. Pass the textToEmbed into the generateEmbeddings function as a parameter.
-    4. Use the `embed` interface to generate embeddings of the textToEmbed and log the embeddings
+/**
+ * The generateObject interface enables us to instruct the model to generate structured output in JSON format based on predefined schema.
+ * 
  */
 
 async function main(){
+  // Generate a basic structured output
+  await basicStructuredOutput()
 
-  const textToEmbed = await generateResponse()
-
-  await generateEmbeddings(textToEmbed)
-
+  // Generate structured output based on classification requirements
+  // await classificationStructuredOutput()
 }
 
 main()
 
 
-async function generateResponse(){
-  /**
-   *  Use the `generateText` interface in generateResponse function to prompt the `aiModel` to create a recipe for your faviourite meal.
-   * 
-   * return the generated text from the function
-   */
-  const {text} = await generateText({
-    model: aiModel,
-    prompt: 'Create a recipe for making a pepperoni pizza'
-  })
-
-  console.log(`Generated text: ${text}\n\n`)
-
-  return text
-}
-
-async function generateEmbeddings(textToEmbed){
-  /**
-   * Use the `embed` interface to generate embeddings of the textToEmbed and log the embeddings
-   */
-  const {embedding} = await embed({
-    model: openai.textEmbeddingModel(EMBEDDING_MODEL_NAME),
-    value: textToEmbed,
+async function basicStructuredOutput(){
+  const result = await generateObject({
+    model,
+    schemaName: 'recipe',
+    schemaDescription: 'A recipe for pizza.',
+    schema: z.object({
+      name: z.string(),
+      ingredients: z.array(
+        z.object({
+          name: z.string(),
+          amount: z.string(),
+        }),
+      ),
+      steps: z.array(z.string()),
+    }),
+    prompt: 'Generate a pizza recipe.',
   });
 
-  console.log(`Embedding generated: ${embedding}`)
+  console.log(JSON.stringify(result.object, null, 2));
 }
+
+
+async function classificationStructuredOutput(){
+  const result = await generateObject({
+    model,
+    schemaName: 'customer_review', //make sure there are no spaces
+    schemaDescription: 'Classification of customer reviews.',
+    schema: z.object({
+      reasoning: z
+        .string()
+        .describe('Brief reasoning for the classification choice.'),
+      type: z
+        .enum(["positive", "negative"]) // An enum type is a special data type that enables for a variable to be a set of predefined constants
+        .describe(
+          'Sentiment of the customer review'
+        ),
+    }),
+    prompt: "Classify the customer review below"+ "\n\n" + "I tried the app and it worked exactly as I expected.",
+  });
+
+  console.log(JSON.stringify(result.object, null, 2));
+}
+
