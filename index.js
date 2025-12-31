@@ -1,38 +1,54 @@
-
-import {retrieveSimilarDocs} from "./retrieveSimilarDocs.js"
-import {getRagPrompt, combineDocuments} from "./utils.js"
-import {ANSWERING_MODEL} from "./constants.js"
 import {openai} from "./config.js"
-import {ingestDocuments} from "./upsertDocuments.js"
-
-const query = "What happened in the early of sunday?"
-
-async function main(query){
-
-  // split text into chunks, embed and store into vector db
-  //  await ingestDocuments()
-
-  // retrieve docs that contain content relevant to the query
-  const docs = await retrieveSimilarDocs(query)
-  // console.log(docs)
-
-  const contextString = combineDocuments(docs);
+import { generateText } from 'ai';
+import { embed } from 'ai';
 
 
-  //create a prompt including context docs to send to the model
-  const prompt = getRagPrompt(contextString, query)
+const EMBEDDING_MODEL_NAME = 'text-embedding-3-small'; 
+const aiModel = openai("gpt-4o")
 
-  // console.log(`Prompt: ${prompt}`)
+/*
+  Challenge: Generate text and embeddings using the vercel ai sdk
+    1. Use the `generateText` interface in generateResponse function to prompt the `aiModel` to create a recipe for your faviourite meal, then return the generated text.
+    2. Call `generateResponse` function in the main function.
+    3. Pass the textToEmbed into the generateEmbeddings function as a parameter.
+    4. Use the `embed` interface to generate embeddings of the textToEmbed and log the embeddings
+ */
 
-  //send prompt to model to generate response
-  const response = await openai.responses.create({
-    model: ANSWERING_MODEL,
-    input: prompt
-  });
+async function main(){
 
-  console.log(response.output_text);
+  const textToEmbed = await generateResponse()
 
+  await generateEmbeddings(textToEmbed)
 
 }
 
-main(query)
+main()
+
+
+async function generateResponse(){
+  /**
+   *  Use the `generateText` interface in generateResponse function to prompt the `aiModel` to create a recipe for your faviourite meal.
+   * 
+   * return the generated text from the function
+   */
+  const {text} = await generateText({
+    model: aiModel,
+    prompt: 'Create a recipe for making a pepperoni pizza'
+  })
+
+  console.log(`Generated text: ${text}\n\n`)
+
+  return text
+}
+
+async function generateEmbeddings(textToEmbed){
+  /**
+   * Use the `embed` interface to generate embeddings of the textToEmbed and log the embeddings
+   */
+  const {embedding} = await embed({
+    model: openai.textEmbeddingModel(EMBEDDING_MODEL_NAME),
+    value: textToEmbed,
+  });
+
+  console.log(`Embedding generated: ${embedding}`)
+}
