@@ -1,12 +1,12 @@
-import {openai} from "./config.js"
-import {supabase} from "./config.js"
+import {openai, supabase} from "./config.js"
+import {EMBEDDING_MODEL_NAME, CHUNK_OVERLAP, CHUNK_SIZE} from "./constants.js"
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import {simpleTextSplitter} from "./utils.js"
 
 // --- Configuration ---
 const SOURCE_DOCUMENTS_DIR = 'docs';
-const EMBEDDING_MODEL_NAME = 'text-embedding-3-small'; 
 const SUPABASE_TABLE_NAME = 'documents'; // Table created in Supabase
 const CLEAR_SUPABASE_TABLE_CONTENTS = true;
 
@@ -63,33 +63,56 @@ export async function ingestDocuments() {
     }
 
     // *** Process each file ***
+    let totalChunks = 0;
+
     for (const filename of files) {
       const filePath = path.join(docsDirPath, filename);
       console.log(`Processing file: ${filename}...`);
 
-      // 2. Read File Content
+      // Read File Content
       const fileContent = fs.readFileSync(filePath, 'utf-8');
       console.log(` - Read ${fileContent.length} characters.`);
 
-      
-      try {
+
+      // split the large text into chunks
+      const chunks = simpleTextSplitter(fileContent, CHUNK_SIZE, CHUNK_OVERLAP);
+
+
+      if (chunks.length === 0) {
+        console.log(` - No chunks generated for this file.`);
+        continue; // Skip to next file
+      }
+
+      /**
+       * Embed each chunk 
+       */
+      console.log(`Embedding ${chunks.length} chunks of text`)
+      let fileChunkCount = 0;
+      for (const chunk of chunks) {
+        fileChunkCount++;
+        try {
           const embeddings = await openai.embeddings.create({
             model: EMBEDDING_MODEL_NAME,
-            input: fileContent,
+            input: chunk,
           });
           // *** Add metadata with source filename ***
           allDocumentsToInsert.push({
-            content: fileContent,
+            content: chunk,
             embedding: embeddings.data[0].embedding,
             metadata: { source: filename }, // Store filename here
           });
-          console.log(`- Embedded content from ${filename}`);
+          console.log(`- Embedded chunk ${fileChunkCount} content from ${filename}`);
         } catch (embedError) {
           console.error(
             `   - Failed to embed content from ${filename}: ${embedError.message}. Skipping chunk.`
           );
         }
+      }
+      
      }
+
+    console.log(`Total chunks generated across all files: ${totalChunks}`);
+
     
     if (allDocumentsToInsert.length === 0) {
       console.log(
@@ -99,7 +122,7 @@ export async function ingestDocuments() {
     }
 
     console.log(
-      `Total documents successfully prepared for insertion: ${allDocumentsToInsert.length}\n\n${JSON.stringify(allDocumentsToInsert, null,2)}`
+      `Total documents successfully prepared for insertion: ${allDocumentsToInsert.length}\n\n`
     );
 
 
@@ -127,3 +150,4 @@ export async function ingestDocuments() {
     process.exit(1); // Exit with error code
   }
 }
+
