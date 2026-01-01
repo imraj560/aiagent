@@ -1,142 +1,140 @@
 import { openai } from '@ai-sdk/openai';
-import { generateObject } from 'ai';
+import { generateText, tool, stepCountIs  } from 'ai';
 import { z } from 'zod';
 
-const model = openai('gpt-4o');
 
+/**
+ * Tools are actions that an LLM can invoke. The results of these actions can be reported back to the LLM to be considered in the next response.
 
-/* Exercise: Structured Output + Classification with generateObject + Zod
---------------------------------------------------------------------
-Your goals:
- 1) Build a Zod schema for a simple sandwich order (basic structured output).
-2) Build a Zod schema for classifying a short message (classification).
+ */
 
-You’ll use `generateObject` to force the model to return strict JSON
-that matches your schemas. 
-*/
+const model = openai('gpt-4o')
 
+async function main(){
 
-async function main() {
-  // TODO: Uncomment the one you're working on:
-  // await basicStructuredOutputExercise();
-  await classificationStructuredOutputExercise();
+  // await basicWeatherToolCall()
+
+   // await multipleToolCalls()
+
+   await generateResponseFromToolCalls()
 }
 
-main();
+main()
 
-// -----------------------------------------------------
-// 1) BASIC STRUCTURED OUTPUT (Sandwich Order)
-// -----------------------------------------------------
-/*
-  Challenge:
-  Create a schema that captures a basic sandwich order based on a plain-English prompt.
-
-  Required fields:
-    - size: one of "small" | "medium" | "large"  (use z.enum)
-    - bread: string
-    - toasted: boolean
-    - toppings: array of strings (at least one)  (use z.array(z.string()).min(1))
-    - notes: optional string
-
-  Steps:
-    A) Define a Zod schema named sandwichSchema (z.object({...})).
-    B) Use generateObject with:
-       - schemaName: "sandwich_order" (no spaces)
-       - schemaDescription: "A simple sandwich order."
-       - schema: sandwichSchema
-       - prompt: describe the order below
-    C) Log the JSON to the console.
-
-  Tip:
-    Add .describe() on fields to gently steer the model (e.g., z.string().describe('...')).
-*/
-async function basicStructuredOutputExercise() {
-  // TODO A: Define the schema
-  const sandwichSchema = z.object({
-    // size: ...
-    size: z.enum(['small', 'medium', 'large']).describe('Overall size of the sandwhich.'),
-    // bread: ...
-    bread: z.string().describe('Type of bread e.g. wheat, white...'),
-    // toasted: ...
-    toasted: z.boolean().describe('Whether the sandwhich will be toasted'),
-    // toppings: ...
-    toppings: z.array(z.string()).min(1).describe("One or more toppings like tomato, lettuce, pickles."),
-    // notes: ...
-    notes: z.string().optional().describe('Optional free-text notes like "cut in half')
-  });
-
-  // TODO B: Generate structured output for this order
-  const prompt = `
-Make a sandwich order with these details:
-- small turkey sandwich on sourdough
-- toppings: lettuce, tomato, pickles
-- toasted: yes
-- note: "cut in half"
-  `.trim();
-
-  const result = await generateObject({
+async function basicWeatherToolCall(){
+  const result = await generateText({
     model,
-    schemaName: 'sandwich_order', // no spaces
-    schemaDescription: 'A simple sandwich order.',
-    schema: sandwichSchema,
-    prompt,
-  });
+    tools: {
+      weather: tool({
+        description: 'Get the weather in a location',
+        inputSchema: z.object({
+          location: z.string().describe('The location to get the weather for'),
+        }),
+        /**
+         * This is an optional async function called with the inputs the model generates from the tool call.
+         */
+        execute: async ({ location }) => ({
+          location,
+          temperature: 50 + Math.floor(Math.random() * 21) - 10, //random number
+        }),
+      }),
+    },
+    prompt: 'What is the weather in New York?',
+});
 
-  // TODO C: Print JSON
-  console.log(JSON.stringify(result.object, null, 2));
+   //input params passed into the execute function
+  for (const toolCall of result.toolCalls) {
+    console.log(toolCall)
+   }
+
+  // generated output from the function call
+  for (const toolResults of result.toolResults) {
+    console.log(toolResults)
+   }
+
+  //  console.log(`Full results object: ${JSON.stringify(result, null, 2)}`)
 }
 
-// -----------------------------------------------------
-// 2) CLASSIFICATION (Message Category)
-// -----------------------------------------------------
-/*
-  Challenge:
-  Classify a short user message into one of three categories:
-    - "compliment"
-    - "complaint"
-    - "question"
 
-  Required fields:
-    - reasoning: string (brief explanation for the choice)
-    - label: enum("compliment", "complaint", "question")
-
-  Steps:
-    A) Define a Zod schema named messageClassSchema.
-    B) Use generateObject with:
-       - schemaName: "message_classification"
-       - schemaDescription: "Classify a user message."
-       - schema: messageClassSchema
-       - prompt: include the user message (provided below)
-    C) Log the JSON to the console.
-
-  Try with these messages (change the text to test yourself!):
-    1) "Your app keeps crashing on startup. Please fix this ASAP!!!"
-    2) "Love the new update—super smooth and fast!"
-    3) "How do I export my data to a CSV?"
-*/
-async function classificationStructuredOutputExercise() {
-  // TODO A: Define the schema
-  const messageClassSchema = z.object({
-    // reasoning: ...
-    reasoning: z.string().describe('Brief explanation for why this label fits.'),
-    // label: ...
-    label: z.enum(['compliment', 'complaint', 'question']).describe('high-level category of the message')
-  });
-
-  // TODO B: Pick one message to classify:
-  const message = 'Your app keeps crashing on startup. Please fix this ASAP!!!';
-
-  const result = await generateObject({
+async function multipleToolCalls(){
+  const result = await generateText({
     model,
-    schemaName: 'message_classification',
-    schemaDescription: 'Classify a user message.',
-    schema: messageClassSchema,
-    prompt:
-      'Classify the user message below:\n\n' +
-      `Message: "${message}"`,
-  });
+    tools: {
+      weather: tool({
+        description: 'Get the weather in a location',
+        inputSchema: z.object({
+          location: z.string().describe('The location to get the weather for'),
+        }),
+        /**
+         * This is an optional async function called with the inputs the model generates from the tool call.
+         */
+        execute: async ({ location }) => ({
+          location,
+          temperature: 50 + Math.floor(Math.random() * 21) - 10, //random number
+        }),
+      }),
+      cityAttractions: tool({
+        description: 'Get the tourist attractions',
+        inputSchema: z.object({ city: z.string() }).describe('attractions in the city'),
+        execute: async ({ city }) => ({
+          city,
+          attractions: ['Statue of Liberty', 'Central Park', 'Met Museum'],
+        }),
+      }),
+    },
+    prompt: 'What is the weather in New York and what are the best attractions to visit?',
+   });
 
-  // TODO C: Print JSON
-  console.log(JSON.stringify(result.object, null, 2));
+   //input params passed into the execute function
+  for (const toolCall of result.toolCalls) {
+    console.log(toolCall)
+   }
+
+  // generated output from the function call
+  for (const toolResults of result.toolResults) {
+    console.log(toolResults)
+   }
+
+  //  console.log(`Full results object: ${JSON.stringify(result, null, 2)}`)
+
 }
 
+/**
+ * By default tool calls only return results returned by the execute function. In order to instruct the model to summarize the tool results, use the `stopWhen` property to tell the model to auto-loop. After tools run, send their results back into the model for another turn so it can use them and produce text. `stepCountIs(n)` puts a hard ceiling on how many model turns you trigger.
+ */
+async function generateResponseFromToolCalls(){
+  const NUMBER_OF_STEPS = 3
+  const weather = tool({
+    description: 'Get the weather in a location',
+    inputSchema: z.object({ location: z.string() }),
+    execute: async ({ location }) => ({ location, temperature: 72 }),
+  });
+
+  const cityAttractions = tool({
+    description: 'Get attractions for a city',
+    inputSchema: z.object({ city: z.string() }),
+    execute: async ({ city }) => ({ city, attractions: ['Central Park', 'Met Museum'] }),
+  });
+
+  const result = await generateText({
+    model,
+    tools: { weather, cityAttractions },
+    stopWhen: stepCountIs(NUMBER_OF_STEPS), //  1) tools; 2) model summarizes
+    prompt: 'What is the weather in New York and what are the best attractions to visit?',
+   });
+
+
+   // extract all tool calls from the steps:
+   const allToolCalls = result.steps.flatMap(step => step.toolCalls);
+
+   console.log(allToolCalls)
+
+   console.log("\n\n")
+
+  // generated output from the function call
+  for (const toolResults of result.toolResults) {
+    console.log(`Tool results: ${toolResults}`)
+   }
+
+  console.log(`Generated results: ${result.text}`)
+}
