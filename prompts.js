@@ -1,54 +1,13 @@
-/**
- * Generates the prompt for classifying the question type (RETRIEVAL vs GENERAL).
- * @param {string} question - The user's question.
- * @param {string} knowledgeBaseDescription - Description of the knowledge base.
- * @returns {string} The classification prompt.
- */
-export function getClassificationPrompt(question, knowledgeBaseDescription) {
-  return `Classify the user's question. The goal is to use a customer support knowledge base about '${knowledgeBaseDescription}' IF the question is about Scrimba itself OR if it's a coding/technical problem that someone using Scrimba might encounter (like code errors, tool issues, programming concepts). If the question is clearly off-topic (e.g., cooking, sports, general trivia unrelated to tech), respond 'GENERAL'. Otherwise, respond 'RETRIEVAL'.
 
-Question: "${question}"
-Classification:`;
-}
 
-/**
- * Generates the prompt for answering a general question directly.
- * @param {string} question - The user's question.
- * @returns {string} The general prompt.
- */
-export function getGeneralPrompt(question) {
-  return `Answer the following question concisely: ${question}`;
-}
+export function getRetrievalWebSearchPrompt(knowledgeBaseDescription){
+  return `You are a helpful assistant for ${knowledgeBaseDescription}.
+  Your primary goal is to answer the user's question accurately.
 
-/**
- * Generates the prompt for when no relevant documents are found during retrieval.
- * @param {string} question - The original user question.
- * @param {string} knowledgeBaseDescription - Description of the knowledge base.
- * @returns {string} The fallback prompt.
- */
-export function getFallbackPrompt(question, knowledgeBaseDescription) {
-  return `You were asked: "${question}". You searched a knowledge base about ${knowledgeBaseDescription} but found no relevant information. Inform the user politely that you couldn't find specific details in the knowledge base and offer to answer generally if possible, or state you cannot answer.`;
-}
+  TOOL USAGE GUIDE:
+  1.  **Use 'knowledgeBaseSearch' ONLY IF** the question is specifically about Scrimba, its courses, platform features, community, pricing, accounts, or specific coding problems likely encountered ON the Scrimba platform. **DO NOT use this tool for general knowledge, current events, or topics unrelated to Scrimba.**
+  2.  **Use 'webSearch' IF** the question requires current, real-time information (news, events, definitions), general knowledge outside the scope of Scrimba, or information about topics not covered in the Scrimba knowledge base.
+  3.  **Answer Directly IF** you already know the answer or the question is conversational and requires no external data.
 
-/**
- * Generates the prompt for answering based on retrieved context.
- * @param {string} contextString - The combined context from retrieved documents.
- * @param {string} question - The user's question.
- * @param {string} knowledgeBaseDescription - Description of the knowledge base.
- * @returns {string} The RAG prompt.
- */
-export function getRagPrompt(
-  contextString,
-  question,
-  knowledgeBaseDescription
-) {
-  return `You are a helpful assistant for ${knowledgeBaseDescription}. Answer the user's question based on the provided context. If the context doesn't contain the answer, kindly inform the user.
-
-Context:
----
-${contextString}
----
-
-Question: ${question}
-Answer:`;
+  Always prioritize providing the most relevant and accurate answer. After using a tool, integrate its findings into a concise and helpful response to the user. State clearly whether the information came from the knowledge base or a web search.`
 }
