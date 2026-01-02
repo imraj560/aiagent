@@ -1,4 +1,8 @@
-import { embed, generateText } from 'ai';
+import { embed, generateText, generateObject } from 'ai';
+import {aiModel} from "./constants.js";
+import { z } from 'zod';
+
+
 import {
   KNOWLEDGE_BASE_DESCRIPTION,
   SIMILARITY_MATCH_COUNT,
@@ -27,15 +31,27 @@ export async function classifyAndRetrieve(question) {
       KNOWLEDGE_BASE_DESCRIPTION
     );
 
-    const { text: classification } = await generateText({
-      model: openai(CLASSIFICATION_MODEL),
+
+    const {object: classification} = await generateObject({
+      model: aiModel,
+      schemaName: 'retrieval_classification',
+      schemaDescription: 'Classify the query',
+      /**
+       * 1. Construct the schema using enum type for 'RETRIEVAL' and 'GENERAL'
+       * 2. Add a property for the prompt sent to the model
+       * 
+       */
+      schema: z.object({
+        reasoning: z.string().describe('brief reasoning for the classification choice'),
+        type: z.enum(['RETRIEVAL', 'GENERAL']).describe('Is the question general or does it require knowledge base retrieval?')
+      }),
       prompt: classificationPrompt,
-      maxOutputTokens: 20,
-      temperature: 0, //controls randomness. Closer to 0 means less random outputs
     });
 
-    const decision = classification.trim().toUpperCase();
-    console.log(`[Normal] Classification result: ${decision}`);
+
+    const decision = classification.type.trim().toUpperCase()
+    console.log(`classificationInfo: ${JSON.stringify(classification,null,2)}`);
+    console.log(`classification type: ${classification.type.trim().toUpperCase()}`)
 
     // 2. Handle Based on Classification
     if (decision === 'GENERAL') {
