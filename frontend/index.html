@@ -1,0 +1,59 @@
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Support AI Chatbot</title>
+
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="style.css" />
+
+ 
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
+</head>
+<body>
+  <main class="chatbot">
+    <h1 class="chatbot__title">Support AI Chatbot</h1>
+
+    <p class="chatbot__subtitle">
+      Ask a question about Scrimba (answers are based on the
+      <a href="https://scrimba.helpscoutdocs.com/" target="_blank" rel="noopener noreferrer">help center articles</a>)
+      or general questions about real-time events.
+    </p>
+
+    
+    <form class="input-group" id="question-form">
+      <textarea
+        id="question-input"
+        placeholder="Enter your question here..."
+        rows="3"
+        required
+      ></textarea>
+      <button id="ask-button" type="submit">Ask</button>
+    </form>
+
+    <section id="answer-area" class="is-hidden" aria-live="polite">
+      <p id="answer-text"></p>
+
+      <div id="loading-indicator" class="is-hidden" role="status" aria-live="polite" aria-busy="true">
+        <div class="spinner"></div><span class="loading-text">Thinking…</span>
+      </div>
+
+      <details id="sources-accordion" class="is-hidden">
+        <summary>View Sources</summary>
+        <div id="sources-content"></div>
+      </details>
+    </section>
+  </main>
+
+  <script src="client.js"></script>
+</body>
+</html>
+
+
+
