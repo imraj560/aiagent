@@ -18,16 +18,3 @@ Built using the Vercel AI SDK, Supabase, and OpenAI models, this application dem
 
 🔒 Secure & Scalable – API keys managed securely and designed for production environments.
 
-🛠 Tech Stack
-
-Frontend & Backend: Next.js (App Router)
-
-AI Interface Layer: Vercel AI SDK
-
-LLM Provider: OpenAI
-
-Vector Database: Supabase (pgvector)
-
-Architecture: Retrieval-Augmented Generation (RAG)
-
-Hosting: Vercel
